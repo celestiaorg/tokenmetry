@@ -19,9 +19,13 @@ The system analyzes repositories configured in `repos.txt`. Current analysis res
 <!-- TOKENMETRY_TABLE_START -->
 | Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |
 |------------|-------------|--------------|----------|-----------|----------------|-----------------|
-| *Analysis results will be updated automatically by GitHub Actions* |
+| celestia-core | 1179 | 3,202,991 | 709 | 2,496,398 | 470 | 706,593 |
+| celestia-app | 436 | 937,662 | 356 | 671,589 | 80 | 266,073 |
+| celestia-node | 494 | 736,663 | 475 | 697,375 | 19 | 39,288 |
+| rsmt2d | 14 | 40,074 | 13 | 38,942 | 1 | 1,132 |
+| **TOTAL** | **2123** | **4,917,390** | **1553** | **3,904,304** | **570** | **1,013,086** |
 
-**Last Updated:** *Auto-generated during workflow runs*
+**Last Updated:** 2025-06-17 14:55:07 UTC
 <!-- TOKENMETRY_TABLE_END -->
 
 **File Types:** `.go` (Go source code) and `.md` (Markdown documentation)
