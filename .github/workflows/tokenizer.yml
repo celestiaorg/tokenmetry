@@ -13,7 +13,7 @@ on:
       - 'repos.txt'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -107,6 +107,73 @@ jobs:
         with open('_site/index.json', 'w') as f:
             json.dump(new_data, f, indent=2)
         EOF
+        
+        # Update README.md with current token analysis results
+        python3 << 'EOF'
+        import json
+        import re
+        from datetime import datetime, timezone
+        
+        # Load the analysis results
+        with open('_site/index.json', 'r') as f:
+            data = json.load(f)
+        
+        # Generate the table content
+        table_rows = []
+        table_rows.append("| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |")
+        table_rows.append("|------------|-------------|--------------|----------|-----------|----------------|-----------------|")
+        
+        for repo in data['repositories']:
+            if 'error' not in repo:
+                name = repo['repository']['name']
+                total_files = repo['total_files']
+                total_tokens = f"{repo['total_tokens']:,}"
+                
+                go_files = repo['by_extension'].get('.go', {}).get('files', 0)
+                go_tokens = f"{repo['by_extension'].get('.go', {}).get('tokens', 0):,}"
+                
+                md_files = repo['by_extension'].get('.md', {}).get('files', 0)
+                md_tokens = f"{repo['by_extension'].get('.md', {}).get('tokens', 0):,}"
+                
+                table_rows.append(f"| {name} | {total_files} | {total_tokens} | {go_files} | {go_tokens} | {md_files} | {md_tokens} |")
+        
+        # Add summary row
+        summary = data['summary']
+        table_rows.append(f"| **TOTAL** | **{summary['total_files']}** | **{summary['total_tokens']:,}** | **{summary['by_extension']['.go']['files']}** | **{summary['by_extension']['.go']['tokens']:,}** | **{summary['by_extension']['.md']['files']}** | **{summary['by_extension']['.md']['tokens']:,}** |")
+        
+        table_content = '\n'.join(table_rows)
+        
+        # Add timestamp
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+        table_with_timestamp = f"{table_content}\n\n**Last Updated:** {timestamp}"
+        
+        # Read current README.md
+        with open('README.md', 'r') as f:
+            readme_content = f.read()
+        
+        # Replace the table section
+        pattern = r'<!-- TOKENMETRY_TABLE_START -->.*?<!-- TOKENMETRY_TABLE_END -->'
+        replacement = f'<!-- TOKENMETRY_TABLE_START -->\n{table_with_timestamp}\n<!-- TOKENMETRY_TABLE_END -->'
+        
+        updated_readme = re.sub(pattern, replacement, readme_content, flags=re.DOTALL)
+        
+        # Write updated README.md
+        with open('README.md', 'w') as f:
+            f.write(updated_readme)
+        
+        print("README.md updated with latest token analysis results")
+        EOF
+        
+        # Commit and push the updated README.md
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add README.md
+        if git diff --staged --quiet; then
+          echo "No changes to README.md"
+        else
+          git commit -m "Update README.md with latest token analysis results [skip ci]"
+          git push
+        fi
         
     - name: Setup Pages
       uses: actions/configure-pages@v4
