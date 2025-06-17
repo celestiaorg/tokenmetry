@@ -30,20 +30,6 @@ The system analyzes repositories configured in `repos.txt`. Current analysis res
 
 **File Types:** `.go` (Go source code) and `.md` (Markdown documentation)
 
-## 🏗️ System Architecture
-
-```mermaid
-graph TD
-    A[repos.txt] --> B[GitHub Actions Workflow]
-    B --> C[tokenizer.py Script]
-    C --> D[Clone Repositories]
-    D --> E[Analyze Files]
-    E --> F[Generate JSON]
-    F --> G[Add AI Metadata]
-    G --> H[Deploy to GitHub Pages]
-    H --> I[https://celestiaorg.github.io/tokenmetry/index.json]
-```
-
 ## 🔧 Components
 
 ### Core Files
