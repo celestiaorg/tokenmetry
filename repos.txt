@@ -1,0 +1,8 @@
+# CelestiaOrg Repository List
+# One repository URL per line
+# Lines starting with # are comments and will be ignored
+
+https://github.com/celestiaorg/celestia-core
+https://github.com/celestiaorg/celestia-app
+https://github.com/celestiaorg/celestia-node
+https://github.com/celestiaorg/rsmt2d
