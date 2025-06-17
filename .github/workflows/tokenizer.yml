@@ -58,12 +58,33 @@ jobs:
         mkdir -p _site
         poetry run python tokenizer.py --celestia-repos --output _site/index.json
         
+    - name: Create index.html redirect
+      run: |
+        cat > _site/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Token Telemetry API</title>
+            <meta http-equiv="refresh" content="0; url=index.json">
+        </head>
+        <body>
+            <h1>🚀 Token Telemetry API</h1>
+            <p>Comprehensive token analysis of CelestiaOrg repositories for AI development and context management.</p>
+            <p>Redirecting to <a href="index.json">index.json</a>...</p>
+            <p><small>Direct link: <code>https://celestiaorg.github.io/tokenmetry/index.json</code></small></p>
+            <p><a href="https://github.com/celestiaorg/tokenmetry">📚 View Documentation on GitHub</a></p>
+        </body>
+        </html>
+        EOF
+        
     - name: Add metadata to JSON
       run: |
         python3 -c "
         import json
         from datetime import datetime, timezone
         from collections import OrderedDict
+        from transformers import GPT2TokenizerFast
         
         with open('_site/index.json', 'r') as f:
             data = json.load(f)
@@ -83,7 +104,17 @@ jobs:
                 'context_management': 'Use token counts to determine how much of a repository can fit in your context window. Average tokens per file can help estimate partial loading strategies.',
                 'repository_selection': 'Compare repositories by total_tokens to prioritize which ones to analyze first based on your context limits.',
                 'file_analysis': 'Use the files array in each repository to identify the largest files that might need special handling or chunking.',
-                'language_breakdown': 'Use by_extension data to understand the mix of Go code vs documentation in each repository.'
+                'language_breakdown': 'Use by_extension data to understand the mix of Go code vs documentation in each repository.',
+                'context_window_warning': {
+                    'message': 'CAUTION: This JSON file itself can be large and may consume significant tokens in your context window.',
+                    'recommendation': 'DO NOT attempt to load or process this entire file at once if your context is constrained.',
+                    'retrieval_strategy': [
+                        '1. Start by fetching and analyzing only the metadata and summary sections for a high-level overview.',
+                        '2. To analyze specific repositories: Iterate through the repositories array. Process the data for ONE repository at a time.',
+                        '3. For very large repositories: First, examine the repository-level summary (e.g., total_tokens, total_files, by_extension). Then, if necessary and context allows, selectively process its files array, potentially in chunks.',
+                        '4. Consider using streaming JSON parsers or selective field extraction rather than loading the complete JSON into memory.'
+                    ]
+                }
             },
             'data_structure': {
                 'summary': 'High-level aggregated statistics across all repositories',
@@ -95,6 +126,20 @@ jobs:
         for key, value in data.items():
             if key != 'metadata':
                 new_data[key] = value
+        
+        # Calculate approximate token count of this JSON file itself
+        json_content = json.dumps(new_data, indent=2)
+        try:
+            tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
+            json_token_count = len(tokenizer.encode(json_content))
+            new_data['metadata']['usage_instructions']['context_window_warning']['json_file_token_count'] = json_token_count
+            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'CAUTION: This JSON file itself contains approximately {json_token_count:,} tokens and may consume significant space in your context window.'
+        except Exception as e:
+            # Fallback to character-based estimation if tokenizer fails
+            char_count = len(json_content)
+            estimated_tokens = char_count // 4  # Rough estimate: ~4 chars per token
+            new_data['metadata']['usage_instructions']['context_window_warning']['json_file_token_count'] = estimated_tokens
+            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'CAUTION: This JSON file itself contains approximately {estimated_tokens:,} tokens (estimated) and may consume significant space in your context window.'
         
         with open('_site/index.json', 'w') as f:
             json.dump(new_data, f, indent=2)

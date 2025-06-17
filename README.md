@@ -15,7 +15,7 @@ The JSON includes comprehensive metadata, usage instructions, and detailed token
 ## 📊 What's Analyzed
 
 The system analyzes repositories configured in `repos.txt`. Current analysis results:
-
+git 
 <!-- TOKENMETRY_TABLE_START -->
 | Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |
 |------------|-------------|--------------|----------|-----------|----------------|-----------------|
