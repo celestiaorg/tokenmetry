@@ -80,11 +80,10 @@ jobs:
         
     - name: Add metadata to JSON
       run: |
-        python3 -c "
+        poetry run python -c "
         import json
         from datetime import datetime, timezone
         from collections import OrderedDict
-        from transformers import GPT2TokenizerFast
         
         with open('_site/index.json', 'r') as f:
             data = json.load(f)
@@ -130,6 +129,7 @@ jobs:
         # Calculate approximate token count of this JSON file itself
         json_content = json.dumps(new_data, indent=2)
         try:
+            from transformers import GPT2TokenizerFast
             tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
             json_token_count = len(tokenizer.encode(json_content))
             new_data['metadata']['usage_instructions']['context_window_warning']['json_file_token_count'] = json_token_count
