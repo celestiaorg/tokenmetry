@@ -204,6 +204,9 @@ def process_repository(repo_url: str, tokenizer) -> Dict:
             repo_path = clone_repository(repo_url, temp_path)
             results = process_directory(str(repo_path), tokenizer)
             
+            # Replace the temporary directory path with just the repo name
+            results['directory'] = repo_name
+            
             # Add repository metadata
             results['repository'] = {
                 'name': repo_name,

@@ -65,25 +65,47 @@ jobs:
         python3 << 'EOF'
         import json
         from datetime import datetime, timezone
+        from collections import OrderedDict
         
         # Load existing results
         with open('_site/index.json', 'r') as f:
             data = json.load(f)
         
-        # Add metadata for AI agents
-        data['metadata'] = {
+        # Create new ordered structure with metadata first
+        new_data = OrderedDict()
+        
+        # Add comprehensive metadata for AI agents at the top
+        new_data['metadata'] = {
             'generated_at': datetime.now(timezone.utc).isoformat(),
             'generator': 'celestiaorg/tokenmetry',
             'version': '1.0.0',
             'format': 'celestia-token-telemetry-v1',
-            'description': 'Token count analysis of CelestiaOrg repositories',
+            'description': 'Token count analysis of CelestiaOrg repositories for AI development and context management',
             'api_endpoint': 'https://celestiaorg.github.io/tokenmetry/index.json',
-            'usage': 'This JSON file contains comprehensive token analysis of CelestiaOrg repositories for AI agent consumption'
+            'purpose': 'This JSON provides comprehensive token analysis of CelestiaOrg repositories to help AI agents understand codebase size, complexity, and structure for better context management and development assistance.',
+            'usage_instructions': {
+                'overview': 'Use summary.total_tokens for overall codebase size. Check individual repositories for specific analysis.',
+                'repository_discovery': 'To see which repositories are analyzed, iterate through the repositories array and check each repository.name and repository.url field.',
+                'context_management': 'Use token counts to determine how much of a repository can fit in your context window. Average tokens per file can help estimate partial loading strategies.',
+                'repository_selection': 'Compare repositories by total_tokens to prioritize which ones to analyze first based on your context limits.',
+                'file_analysis': 'Use the files array in each repository to identify the largest files that might need special handling or chunking.',
+                'language_breakdown': 'Use by_extension data to understand the mix of Go code vs documentation in each repository.'
+            },
+            'data_structure': {
+                'summary': 'High-level aggregated statistics across all repositories',
+                'repositories': 'Array of individual repository analyses with detailed file breakdowns',
+                'token_counting': 'Uses GPT-2 tokenizer for consistent token counting across all content'
+            }
         }
         
-        # Save updated results
+        # Add all other data
+        for key, value in data.items():
+            if key != 'metadata':  # Don't duplicate metadata
+                new_data[key] = value
+        
+        # Save updated results with metadata first
         with open('_site/index.json', 'w') as f:
-            json.dump(data, f, indent=2)
+            json.dump(new_data, f, indent=2)
         EOF
         
     - name: Setup Pages
