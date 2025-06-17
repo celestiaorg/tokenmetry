@@ -53,28 +53,22 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
       
-    - name: Run token analysis and prepare for deployment
+    - name: Run token analysis
       run: |
-        # Create deployment directory
         mkdir -p _site
-        
-        # Run token analysis and output directly to deployment directory
         poetry run python tokenizer.py --celestia-repos --output _site/index.json
         
-        # Add metadata for AI agents
-        python3 << 'EOF'
+    - name: Add metadata to JSON
+      run: |
+        python3 -c "
         import json
         from datetime import datetime, timezone
         from collections import OrderedDict
         
-        # Load existing results
         with open('_site/index.json', 'r') as f:
             data = json.load(f)
         
-        # Create new ordered structure with metadata first
         new_data = OrderedDict()
-        
-        # Add comprehensive metadata for AI agents at the top
         new_data['metadata'] = {
             'generated_at': datetime.now(timezone.utc).isoformat(),
             'generator': 'celestiaorg/tokenmetry',
@@ -98,73 +92,63 @@ jobs:
             }
         }
         
-        # Add all other data
         for key, value in data.items():
-            if key != 'metadata':  # Don't duplicate metadata
+            if key != 'metadata':
                 new_data[key] = value
         
-        # Save updated results with metadata first
         with open('_site/index.json', 'w') as f:
             json.dump(new_data, f, indent=2)
-        EOF
+        "
         
-        # Update README.md with current token analysis results
-        python3 << 'EOF'
+    - name: Update README table
+      run: |
+        python3 -c "
         import json
         import re
         from datetime import datetime, timezone
         
-        # Load the analysis results
         with open('_site/index.json', 'r') as f:
             data = json.load(f)
         
-        # Generate the table content
         table_rows = []
-        table_rows.append("| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |")
-        table_rows.append("|------------|-------------|--------------|----------|-----------|----------------|-----------------|")
+        table_rows.append('| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |')
+        table_rows.append('|------------|-------------|--------------|----------|-----------|----------------|-----------------|')
         
         for repo in data['repositories']:
             if 'error' not in repo:
                 name = repo['repository']['name']
                 total_files = repo['total_files']
-                total_tokens = f"{repo['total_tokens']:,}"
+                total_tokens = f\"{repo['total_tokens']:,}\"
                 
                 go_files = repo['by_extension'].get('.go', {}).get('files', 0)
-                go_tokens = f"{repo['by_extension'].get('.go', {}).get('tokens', 0):,}"
+                go_tokens = f\"{repo['by_extension'].get('.go', {}).get('tokens', 0):,}\"
                 
                 md_files = repo['by_extension'].get('.md', {}).get('files', 0)
-                md_tokens = f"{repo['by_extension'].get('.md', {}).get('tokens', 0):,}"
+                md_tokens = f\"{repo['by_extension'].get('.md', {}).get('tokens', 0):,}\"
                 
-                table_rows.append(f"| {name} | {total_files} | {total_tokens} | {go_files} | {go_tokens} | {md_files} | {md_tokens} |")
+                table_rows.append(f'| {name} | {total_files} | {total_tokens} | {go_files} | {go_tokens} | {md_files} | {md_tokens} |')
         
-        # Add summary row
         summary = data['summary']
-        table_rows.append(f"| **TOTAL** | **{summary['total_files']}** | **{summary['total_tokens']:,}** | **{summary['by_extension']['.go']['files']}** | **{summary['by_extension']['.go']['tokens']:,}** | **{summary['by_extension']['.md']['files']}** | **{summary['by_extension']['.md']['tokens']:,}** |")
+        table_rows.append(f'| **TOTAL** | **{summary[\"total_files\"]}** | **{summary[\"total_tokens\"]:,}** | **{summary[\"by_extension\"][\".go\"][\"files\"]}** | **{summary[\"by_extension\"][\".go\"][\"tokens\"]:,}** | **{summary[\"by_extension\"][\".md\"][\"files\"]}** | **{summary[\"by_extension\"][\".md\"][\"tokens\"]:,}** |')
         
         table_content = '\n'.join(table_rows)
-        
-        # Add timestamp
         timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
-        table_with_timestamp = f"{table_content}\n\n**Last Updated:** {timestamp}"
+        table_with_timestamp = f'{table_content}\n\n**Last Updated:** {timestamp}'
         
-        # Read current README.md
         with open('README.md', 'r') as f:
             readme_content = f.read()
         
-        # Replace the table section
         pattern = r'<!-- TOKENMETRY_TABLE_START -->.*?<!-- TOKENMETRY_TABLE_END -->'
         replacement = f'<!-- TOKENMETRY_TABLE_START -->\n{table_with_timestamp}\n<!-- TOKENMETRY_TABLE_END -->'
         
         updated_readme = re.sub(pattern, replacement, readme_content, flags=re.DOTALL)
         
-        # Write updated README.md
         with open('README.md', 'w') as f:
             f.write(updated_readme)
+        "
         
-        print("README.md updated with latest token analysis results")
-        EOF
-        
-        # Commit and push the updated README.md
+    - name: Commit README updates
+      run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add README.md
