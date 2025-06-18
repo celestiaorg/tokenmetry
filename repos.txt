@@ -2,7 +2,23 @@
 # One repository URL per line
 # Lines starting with # are comments and will be ignored
 
+# CORE CELESTIA 
 https://github.com/celestiaorg/celestia-core
 https://github.com/celestiaorg/celestia-app
 https://github.com/celestiaorg/celestia-node
 https://github.com/celestiaorg/rsmt2d
+
+# SOLUTIONS TEAM 
+https://github.com/celestiaorg/optimism
+https://github.com/celestiaorg/nitro
+https://github.com/celestiaorg/nitro-contracts
+https://github.com/celestiaorg/nitro-das-celestia
+https://github.com/celestiaorg/docs
+https://github.com/celestiaorg/eq-service
+https://github.com/celestiaorg/CIPs
+https://github.com/celestiaorg/pda-proxy
+https://github.com/celestiaorg/hana
+http://github.com/celestiaorg/localestia
+
+https://github.com/rollkit/rollkit
+https://github.com/matter-labs/zksync-era

@@ -84,64 +84,68 @@ jobs:
         import json
         from datetime import datetime, timezone
         from collections import OrderedDict
+        import os
+
+        # This is the meta-index file, located at the root of the deployment (_site)
+        index_path = '_site/index.json' 
         
-        with open('_site/index.json', 'r') as f:
-            data = json.load(f)
+        with open(index_path, 'r') as f:
+            data = json.load(f) # This data is already structured as a meta-index by tokenizer.py
         
         new_data = OrderedDict()
+        # Ensure metadata is the first key
         new_data['metadata'] = {
             'generated_at': datetime.now(timezone.utc).isoformat(),
             'generator': 'celestiaorg/tokenmetry',
-            'version': '1.0.0',
-            'format': 'celestia-token-telemetry-v1',
-            'description': 'Token count analysis of CelestiaOrg repositories for AI development and context management',
-            'api_endpoint': 'https://celestiaorg.github.io/tokenmetry/index.json',
-            'purpose': 'This JSON provides comprehensive token analysis of CelestiaOrg repositories to help AI agents understand codebase size, complexity, and structure for better context management and development assistance.',
+            'version': '1.1.0', # Version indicating meta-index structure
+            'format': 'celestia-token-telemetry-meta-v1', # Format name for the meta-index
+            'description': 'Meta-index for token count analysis of CelestiaOrg repositories. Provides summaries and links to detailed per-repository data files located in the repository_data/ directory.',
+            'api_endpoint': 'https://celestiaorg.github.io/tokenmetry/index.json', # This file itself
+            'purpose': 'This JSON meta-index helps AI agents discover available repository token analyses, understand overall codebase statistics, and selectively access detailed data for specific repositories located in the repository_data/ directory.',
             'usage_instructions': {
-                'overview': 'Use summary.total_tokens for overall codebase size. Check individual repositories for specific analysis.',
-                'repository_discovery': 'To see which repositories are analyzed, iterate through the repositories array and check each repository.name and repository.url field.',
-                'context_management': 'Use token counts to determine how much of a repository can fit in your context window. Average tokens per file can help estimate partial loading strategies.',
-                'repository_selection': 'Compare repositories by total_tokens to prioritize which ones to analyze first based on your context limits.',
-                'file_analysis': 'Use the files array in each repository to identify the largest files that might need special handling or chunking.',
-                'language_breakdown': 'Use by_extension data to understand the mix of Go code vs documentation in each repository.',
+                'overview': 'Use `summary` fields for overall codebase size. Iterate through the `repositories` array for per-repository summaries and links to detailed data files.',
+                'repository_discovery': 'The `repositories` array lists all processed repositories. Each entry includes `name`, `url`, `total_tokens`, `total_files`, a `by_extension` summary for that repo, and a `data_file` field (e.g., `repository_data/repo_name.json`) which is the relative path to the detailed JSON for that repository.',
+                'accessing_detailed_data': 'To get detailed file breakdowns for a repository, construct the full URL: `https://celestiaorg.github.io/tokenmetry/` + `data_file` value from the repository entry in this meta-index. The detailed file will contain a `files` array with individual file paths and token counts.',
+                'context_management': 'Use `total_tokens` from this `index.json` (meta-index) for a quick overview. For detailed planning, fetch the individual repository JSON. The `json_file_token_count` in *those* files (if we add it there later) would indicate their size.',
+                'language_breakdown': '`summary.by_extension_across_all_repos` provides an overall language mix. Per-repository breakdowns are in `repositories[N].by_extension` within this file.',
                 'context_window_warning': {
-                    'message': 'CAUTION: This JSON file itself can be large and may consume significant tokens in your context window.',
-                    'recommendation': 'DO NOT attempt to load or process this entire file at once if your context is constrained.',
+                    'message': 'This `index.json` (meta-index) file is designed to be relatively small. Individual repository JSON files (linked via `data_file` in the `repositories` array, located in the `repository_data/` directory) can be large.',
+                    'recommendation': 'Always fetch and parse this `index.json` (meta-index) first. Then, selectively fetch individual repository JSONs as needed.',
                     'retrieval_strategy': [
-                        '1. Start by fetching and analyzing only the metadata and summary sections for a high-level overview.',
-                        '2. To analyze specific repositories: Iterate through the repositories array. Process the data for ONE repository at a time.',
-                        '3. For very large repositories: First, examine the repository-level summary (e.g., total_tokens, total_files, by_extension). Then, if necessary and context allows, selectively process its files array, potentially in chunks.',
-                        '4. Consider using streaming JSON parsers or selective field extraction rather than loading the complete JSON into memory.'
+                        '1. Fetch and parse this `index.json` (meta-index) file.',
+                        '2. Analyze the `summary` and the `repositories` array to identify repositories of interest.',
+                        '3. For each repository of interest, use its `data_file` path (e.g., `repository_data/your_repo_name.json`) to construct the full URL and fetch its detailed JSON data (e.g., `https://celestiaorg.github.io/tokenmetry/repository_data/your_repo_name.json`).',
+                        '4. Process the detailed JSON. Be mindful of its size.'
                     ]
                 }
             },
             'data_structure': {
-                'summary': 'High-level aggregated statistics across all repositories',
-                'repositories': 'Array of individual repository analyses with detailed file breakdowns',
-                'token_counting': 'Uses GPT-2 tokenizer for consistent token counting across all content'
+                'summary': 'High-level aggregated statistics across all repositories (total_repositories_configured, successful_repositories_processed, total_files_across_all_repos, total_tokens_across_all_repos, by_extension_across_all_repos).',
+                'repositories': 'Array of objects, each summarizing a single repository (name, url, data_file path, total_files, total_tokens, by_extension summary for that repo, error status). The `data_file` points to a separate JSON in the `repository_data/` directory with detailed file breakdowns for that repository.',
+                'token_counting': 'Uses GPT-2 tokenizer for consistent token counting across all content.'
             }
         }
         
+        # Add original keys from tokenizer.py output (summary, repositories) after metadata
         for key, value in data.items():
-            if key != 'metadata':
-                new_data[key] = value
-        
-        # Calculate approximate token count of this JSON file itself
-        json_content = json.dumps(new_data, indent=2)
+            if key not in new_data: # Avoid overwriting if script already produced 'metadata'
+                 new_data[key] = value
+
+        # Calculate approximate token count of this index.json (meta-index) file itself
+        json_content_for_meta_index = json.dumps(new_data, indent=2)
         try:
             from transformers import GPT2TokenizerFast
-            tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-            json_token_count = len(tokenizer.encode(json_content))
-            new_data['metadata']['usage_instructions']['context_window_warning']['json_file_token_count'] = json_token_count
-            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'CAUTION: This JSON file itself contains approximately {json_token_count:,} tokens and may consume significant space in your context window.'
+            tokenizer_for_meta = GPT2TokenizerFast.from_pretrained('gpt2')
+            meta_json_token_count = len(tokenizer_for_meta.encode(json_content_for_meta_index))
+            new_data['metadata']['usage_instructions']['context_window_warning']['meta_index_file_token_count'] = meta_json_token_count
+            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'This index.json (meta-index) file itself contains approximately {meta_json_token_count:,} tokens.'
         except Exception as e:
-            # Fallback to character-based estimation if tokenizer fails
-            char_count = len(json_content)
-            estimated_tokens = char_count // 4  # Rough estimate: ~4 chars per token
-            new_data['metadata']['usage_instructions']['context_window_warning']['json_file_token_count'] = estimated_tokens
-            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'CAUTION: This JSON file itself contains approximately {estimated_tokens:,} tokens (estimated) and may consume significant space in your context window.'
+            char_count_meta = len(json_content_for_meta_index)
+            estimated_tokens_meta = char_count_meta // 4 
+            new_data['metadata']['usage_instructions']['context_window_warning']['meta_index_file_token_count'] = estimated_tokens_meta
+            new_data['metadata']['usage_instructions']['context_window_warning']['message'] = f'This index.json (meta-index) file itself contains approximately {estimated_tokens_meta:,} tokens (estimated).'
         
-        with open('_site/index.json', 'w') as f:
+        with open(index_path, 'w') as f:
             json.dump(new_data, f, indent=2)
         "
         
@@ -151,30 +155,62 @@ jobs:
         import json
         import re
         from datetime import datetime, timezone
+        import os
+
+        # This is now the meta-index file
+        index_path = '_site/index.json'
         
-        with open('_site/index.json', 'r') as f:
-            data = json.load(f)
+        with open(index_path, 'r') as f:
+            # data from index.json is the meta-index content
+            data = json.load(f) 
         
         table_rows = []
-        table_rows.append('| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |')
-        table_rows.append('|------------|-------------|--------------|----------|-----------|----------------|-----------------|')
+        table_rows.append('| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens | Rust Files | Rust Tokens | Solidity Files | Solidity Tokens |')
+        table_rows.append('|------------|-------------|--------------|----------|-----------|----------------|-----------------|------------|-------------|----------------|-----------------|')
         
-        for repo in data['repositories']:
-            if 'error' not in repo:
-                name = repo['repository']['name']
-                total_files = repo['total_files']
-                total_tokens = f\"{repo['total_tokens']:,}\"
+        # Iterate through repositories listed in the meta-index
+        for repo_summary_in_meta in data.get('repositories', []):
+            if not repo_summary_in_meta.get('error'):
+                name = repo_summary_in_meta['name']
+                total_files = repo_summary_in_meta['total_files']
+                total_tokens = f\"{repo_summary_in_meta['total_tokens']:,}\"
                 
-                go_files = repo['by_extension'].get('.go', {}).get('files', 0)
-                go_tokens = f\"{repo['by_extension'].get('.go', {}).get('tokens', 0):,}\"
+                # by_extension data is directly available in the repo_summary_in_meta
+                repo_by_ext = repo_summary_in_meta.get('by_extension', {})
+
+                go_files = repo_by_ext.get('.go', {}).get('files', 0)
+                go_tokens = f\"{repo_by_ext.get('.go', {}).get('tokens', 0):,}\"
                 
-                md_files = repo['by_extension'].get('.md', {}).get('files', 0)
-                md_tokens = f\"{repo['by_extension'].get('.md', {}).get('tokens', 0):,}\"
+                md_files = repo_by_ext.get('.md', {}).get('files', 0)
+                md_tokens = f\"{repo_by_ext.get('.md', {}).get('tokens', 0):,}\"
+
+                rs_files = repo_by_ext.get('.rs', {}).get('files', 0)
+                rs_tokens = f\"{repo_by_ext.get('.rs', {}).get('tokens', 0):,}\"
+
+                sol_files = repo_by_ext.get('.sol', {}).get('files', 0)
+                sol_tokens = f\"{repo_by_ext.get('.sol', {}).get('tokens', 0):,}\"
                 
-                table_rows.append(f'| {name} | {total_files} | {total_tokens} | {go_files} | {go_tokens} | {md_files} | {md_tokens} |')
-        
-        summary = data['summary']
-        table_rows.append(f'| **TOTAL** | **{summary[\"total_files\"]}** | **{summary[\"total_tokens\"]:,}** | **{summary[\"by_extension\"][\".go\"][\"files\"]}** | **{summary[\"by_extension\"][\".go\"][\"tokens\"]:,}** | **{summary[\"by_extension\"][\".md\"][\"files\"]}** | **{summary[\"by_extension\"][\".md\"][\"tokens\"]:,}** |')
+                table_rows.append(f'| {name} | {total_files} | {total_tokens} | {go_files} | {go_tokens} | {md_files} | {md_tokens} | {rs_files} | {rs_tokens} | {sol_files} | {sol_tokens} |')
+            else:
+                name = repo_summary_in_meta.get('name', 'Unknown Repo')
+                table_rows.append(f'| {name} | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |') # Row for errored repos
+
+        # Use overall summary from meta-index for the TOTAL row
+        overall_summary = data['summary'] # This is the overall summary from the meta-index
+        summary_total_files = overall_summary.get('total_files_across_all_repos', 0)
+        summary_total_tokens = overall_summary.get('total_tokens_across_all_repos', 0)
+        summary_by_ext = overall_summary.get('by_extension_across_all_repos', {}) # Use the overall by_extension summary
+
+        summary_go_files = summary_by_ext.get('.go', {}).get('files', 0)
+        summary_go_tokens = summary_by_ext.get('.go', {}).get('tokens', 0)
+        summary_md_files = summary_by_ext.get('.md', {}).get('files', 0)
+        summary_md_tokens = summary_by_ext.get('.md', {}).get('tokens', 0)
+        summary_rs_files = summary_by_ext.get('.rs', {}).get('files', 0)
+        summary_rs_tokens = summary_by_ext.get('.rs', {}).get('tokens', 0)
+        summary_sol_files = summary_by_ext.get('.sol', {}).get('files', 0)
+        summary_sol_tokens = summary_by_ext.get('.sol', {}).get('tokens', 0)
+
+        table_rows.append(f'| **TOTAL** | **{summary_total_files}** | **{summary_total_tokens:,}** | **{summary_go_files}** | **{summary_go_tokens:,}** | **{summary_md_files}** | **{summary_md_tokens:,}** | **{summary_rs_files}** | **{summary_rs_tokens:,}** | **{summary_sol_files}** | **{summary_sol_tokens:,}** |')
         
         table_content = '\n'.join(table_rows)
         timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')

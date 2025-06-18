@@ -100,7 +100,7 @@ def count_tokens_in_file(file_path: str, tokenizer) -> tuple[int, str]:
     
     # Check if it's a supported file type
     extension = path.suffix.lower()
-    if extension not in ['.go', '.md']:
+    if extension not in ['.go', '.md', '.rs', '.sol']:
         return 0, extension  # Skip unsupported files silently
     
     try:
@@ -136,13 +136,15 @@ def process_directory(directory_path: str, tokenizer) -> Dict:
         'total_tokens': 0,
         'by_extension': {
             '.go': {'files': 0, 'tokens': 0},
-            '.md': {'files': 0, 'tokens': 0}
+            '.md': {'files': 0, 'tokens': 0},
+            '.rs': {'files': 0, 'tokens': 0},
+            '.sol': {'files': 0, 'tokens': 0}
         },
         'files': []
     }
     
-    # Find all .go and .md files
-    for pattern in ['**/*.go', '**/*.md']:
+    # Find all .go, .md, .rs, and .sol files
+    for pattern in ['**/*.go', '**/*.md', '**/*.rs', '**/*.sol']:
         for file_path in path.glob(pattern):
             if file_path.is_file():
                 token_count, extension = count_tokens_in_file(str(file_path), tokenizer)
@@ -225,47 +227,85 @@ def process_repository(repo_url: str, tokenizer) -> Dict:
             }
 
 
-def process_multiple_repositories(repo_urls: List[str], tokenizer) -> Dict:
+def process_multiple_repositories(repo_urls: List[str], tokenizer, output_base_path: Path) -> Dict:
     """
-    Process multiple repositories.
+    Process multiple repositories, saving individual repo data and returning meta-index data.
     
+    Args:
+        repo_urls: List of repository URLs.
+        tokenizer: The tokenizer instance.
+        output_base_path: The base path where 'meta_index.json' and 'repository_data/' will be stored.
+        
     Returns:
-        dict: Combined results for all repositories
+        dict: Data for the meta_index.json file.
     """
-    all_results = {
+    repository_data_dir = output_base_path / "repository_data"
+    repository_data_dir.mkdir(parents=True, exist_ok=True)
+
+    meta_index_data = {
         'summary': {
-            'total_repositories': len(repo_urls),
-            'successful_repositories': 0,
-            'total_files': 0,
-            'total_tokens': 0,
-            'by_extension': {
+            'total_repositories_configured': len(repo_urls),
+            'successful_repositories_processed': 0,
+            'total_files_across_all_repos': 0,
+            'total_tokens_across_all_repos': 0,
+            'by_extension_across_all_repos': {
                 '.go': {'files': 0, 'tokens': 0},
-                '.md': {'files': 0, 'tokens': 0}
+                '.md': {'files': 0, 'tokens': 0},
+                '.rs': {'files': 0, 'tokens': 0},
+                '.sol': {'files': 0, 'tokens': 0}
             }
         },
-        'repositories': []
+        'repositories': [] # List of summaries for each repo, pointing to their individual files
     }
     
     for repo_url in repo_urls:
         print(f"\nProcessing {repo_url}...")
-        repo_results = process_repository(repo_url, tokenizer)
-        all_results['repositories'].append(repo_results)
+        # repo_results contains detailed file list for this specific repo
+        repo_results = process_repository(repo_url, tokenizer) 
         
-        # Update summary if processing was successful
+        repo_name = repo_results.get('repository', {}).get('name', 'unknown_repo')
+        individual_repo_filename = f"{repo_name}.json"
+        individual_repo_filepath = repository_data_dir / individual_repo_filename
+        
         if 'error' not in repo_results:
-            all_results['summary']['successful_repositories'] += 1
-            all_results['summary']['total_files'] += repo_results['total_files']
-            all_results['summary']['total_tokens'] += repo_results['total_tokens']
+            # Save detailed data for this specific repository
+            try:
+                with open(individual_repo_filepath, 'w') as f:
+                    json.dump(repo_results, f, indent=2)
+                print(f"  Detailed data saved to: {individual_repo_filepath}")
+            except Exception as e:
+                print(f"  Error saving detailed data for {repo_name}: {e}")
+                # Continue processing other repos, but mark this one as having an issue with saving
+                repo_results['error'] = repo_results.get('error', '') + f"; Failed to save individual JSON: {e}"
+
+        # Prepare summary for this repo to be included in meta_index.json
+        repo_summary_for_meta = {
+            'name': repo_name,
+            'url': repo_url,
+            'data_file': f"repository_data/{individual_repo_filename}", # Relative path for GitHub Pages
+            'total_files': repo_results.get('total_files', 0),
+            'total_tokens': repo_results.get('total_tokens', 0),
+            'by_extension': repo_results.get('by_extension', {}),
+            'error': repo_results.get('error', None)
+        }
+        meta_index_data['repositories'].append(repo_summary_for_meta)
+        
+        # Update overall summary in meta_index_data if processing was successful (error field is not present or empty)
+        if not repo_summary_for_meta['error']:
+            meta_index_data['summary']['successful_repositories_processed'] += 1
+            meta_index_data['summary']['total_files_across_all_repos'] += repo_summary_for_meta['total_files']
+            meta_index_data['summary']['total_tokens_across_all_repos'] += repo_summary_for_meta['total_tokens']
             
-            # Update by extension
-            for ext in ['.go', '.md']:
-                if ext in repo_results['by_extension']:
-                    all_results['summary']['by_extension'][ext]['files'] += repo_results['by_extension'][ext]['files']
-                    all_results['summary']['by_extension'][ext]['tokens'] += repo_results['by_extension'][ext]['tokens']
+            for ext, data in repo_summary_for_meta['by_extension'].items():
+                if ext in meta_index_data['summary']['by_extension_across_all_repos']:
+                    meta_index_data['summary']['by_extension_across_all_repos'][ext]['files'] += data.get('files', 0)
+                    meta_index_data['summary']['by_extension_across_all_repos'][ext]['tokens'] += data.get('tokens', 0)
             
-            print(f"✓ {repo_results['repository']['name']}: {repo_results['total_files']} files, {repo_results['total_tokens']} tokens")
-    
-    return all_results
+            print(f"✓ {repo_name}: {repo_summary_for_meta['total_files']} files, {repo_summary_for_meta['total_tokens']} tokens")
+        else:
+            print(f"✗ {repo_name}: Processing encountered an error: {repo_summary_for_meta['error']}")
+            
+    return meta_index_data
 
 
 def main():
@@ -304,6 +344,8 @@ def main():
             print(f"Total tokens: {results['total_tokens']:,}")
             print(f"Go files: {results['by_extension']['.go']['files']} files, {results['by_extension']['.go']['tokens']:,} tokens")
             print(f"Markdown files: {results['by_extension']['.md']['files']} files, {results['by_extension']['.md']['tokens']:,} tokens")
+            print(f"Rust files: {results['by_extension']['.rs']['files']} files, {results['by_extension']['.rs']['tokens']:,} tokens")
+            print(f"Solidity files: {results['by_extension']['.sol']['files']} files, {results['by_extension']['.sol']['tokens']:,} tokens")
             
             if args.verbose:
                 print("\nFile details:")
@@ -332,6 +374,8 @@ def main():
             print(f"Total tokens: {results['total_tokens']:,}")
             print(f"Go files: {results['by_extension']['.go']['files']} files, {results['by_extension']['.go']['tokens']:,} tokens")
             print(f"Markdown files: {results['by_extension']['.md']['files']} files, {results['by_extension']['.md']['tokens']:,} tokens")
+            print(f"Rust files: {results['by_extension']['.rs']['files']} files, {results['by_extension']['.rs']['tokens']:,} tokens")
+            print(f"Solidity files: {results['by_extension']['.sol']['files']} files, {results['by_extension']['.sol']['tokens']:,} tokens")
             
             if args.verbose:
                 print("\nFile details:")
@@ -352,33 +396,46 @@ def main():
             # Load repositories from file
             repo_urls = load_repositories_from_file(args.repo_file)
             print(f"Loaded {len(repo_urls)} repositories from {args.repo_file}")
+
+            if not args.output:
+                print("Error: --output path is required when using --celestia-repos for meta_index.json.")
+                sys.exit(1)
             
-            results = process_multiple_repositories(repo_urls, tokenizer)
+            output_meta_index_path = Path(args.output)
+            # The script will create a 'repository_data' subdirectory within the parent of the --output file.
+            # E.g., if --output is _site/meta_index.json, individual files go into _site/repository_data/
+            output_base_dir = output_meta_index_path.parent
+            output_base_dir.mkdir(parents=True, exist_ok=True)
+
+            meta_index_content = process_multiple_repositories(repo_urls, tokenizer, output_base_dir)
             
+            try:
+                with open(output_meta_index_path, 'w') as f:
+                    json.dump(meta_index_content, f, indent=2)
+                print(f"\nMeta-index saved to: {output_meta_index_path}")
+            except Exception as e:
+                print(f"Error saving meta-index to {output_meta_index_path}: {e}")
+                sys.exit(1)
+
             print("\n" + "=" * 60)
-            print("CELESTIA REPOSITORIES SUMMARY")
+            print("CELESTIA REPOSITORIES META-INDEX SUMMARY")
             print("=" * 60)
-            summary = results['summary']
-            print(f"Repositories processed: {summary['successful_repositories']}/{summary['total_repositories']}")
-            print(f"Total files: {summary['total_files']}")
-            print(f"Total tokens: {summary['total_tokens']:,}")
-            print(f"Go files: {summary['by_extension']['.go']['files']} files, {summary['by_extension']['.go']['tokens']:,} tokens")
-            print(f"Markdown files: {summary['by_extension']['.md']['files']} files, {summary['by_extension']['.md']['tokens']:,} tokens")
+            summary = meta_index_content['summary']
+            print(f"Repositories configured: {summary['total_repositories_configured']}")
+            print(f"Repositories successfully processed: {summary['successful_repositories_processed']}")
+            print(f"Total files across all processed repos: {summary['total_files_across_all_repos']:,}")
+            print(f"Total tokens across all processed repos: {summary['total_tokens_across_all_repos']:,}")
             
+            for ext_name, data in summary['by_extension_across_all_repos'].items():
+                 print(f"{ext_name.replace('.', '').capitalize()} files: {data['files']:,} files, {data['tokens']:,} tokens")
+
             if args.verbose:
-                print("\nRepository details:")
-                for repo in results['repositories']:
-                    if 'error' not in repo:
-                        print(f"\n{repo['repository']['name']}:")
-                        for file_info in repo['files']:
-                            print(f"  {file_info['path']}: {file_info['tokens']} tokens")
+                print("\nIndividual Repository Summaries (from meta-index):")
+                for repo_summary in meta_index_content['repositories']:
+                    status = "OK" if not repo_summary.get('error') else f"ERROR ({repo_summary['error']})"
+                    print(f"  - {repo_summary['name']}: {repo_summary['total_tokens']:,} tokens in {repo_summary['total_files']} files. Status: {status}. Data: {repo_summary['data_file']}")
             
-            if args.output:
-                with open(args.output, 'w') as f:
-                    json.dump(results, f, indent=2)
-                print(f"\nDetailed results saved to: {args.output}")
-            
-            return 0 if summary['successful_repositories'] > 0 else 1
+            return 0 if summary['successful_repositories_processed'] > 0 else 1
                 
         except Exception as e:
             print(f"Error: {e}")
