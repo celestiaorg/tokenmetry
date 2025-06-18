@@ -80,7 +80,7 @@ jobs:
         
     - name: Add metadata to JSON
       run: |
-        poetry run python -c "
+        cat > ./add_metadata_script.py << 'EOL'
         import json
         from datetime import datetime, timezone
         from collections import OrderedDict
@@ -154,7 +154,8 @@ jobs:
         
         with open(index_path, 'w') as f:
             json.dump(new_data, f, indent=2)
-        "
+        EOL
+        poetry run python ./add_metadata_script.py
         
     - name: Update README table
       run: |
