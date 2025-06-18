@@ -23,6 +23,5 @@ http://github.com/celestiaorg/localestia
 # SOLUTIONS TEAM External
 https://github.com/rollkit/rollkit
 https://github.com/matter-labs/zksync-era
-https://github.com/chopinframework
 https://github.com/dojoengine/dojo
 https://github.com/initia-labs/weave
