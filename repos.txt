@@ -8,7 +8,7 @@ https://github.com/celestiaorg/celestia-app
 https://github.com/celestiaorg/celestia-node
 https://github.com/celestiaorg/rsmt2d
 
-# SOLUTIONS TEAM 
+# SOLUTIONS TEAM Internal
 https://github.com/celestiaorg/optimism
 https://github.com/celestiaorg/nitro
 https://github.com/celestiaorg/nitro-contracts
@@ -20,5 +20,9 @@ https://github.com/celestiaorg/pda-proxy
 https://github.com/celestiaorg/hana
 http://github.com/celestiaorg/localestia
 
+# SOLUTIONS TEAM External
 https://github.com/rollkit/rollkit
 https://github.com/matter-labs/zksync-era
+https://github.com/chopinframework
+https://github.com/dojoengine/dojo
+https://github.com/initia-labs/weave
