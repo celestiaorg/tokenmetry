@@ -130,6 +130,13 @@ jobs:
         for key, value in data.items():
             if key not in new_data: # Avoid overwriting if script already produced 'metadata'
                  new_data[key] = value
+        
+        # Add full URLs to individual repository data files
+        base_url = "https://celestiaorg.github.io/tokenmetry/"
+        if 'repositories' in new_data and isinstance(new_data['repositories'], list):
+            for repo_entry in new_data['repositories']:
+                if 'data_file' in repo_entry and isinstance(repo_entry['data_file'], str):
+                    repo_entry['data_file_full_url'] = base_url + repo_entry['data_file']
 
         # Calculate approximate token count of this index.json (meta-index) file itself
         json_content_for_meta_index = json.dumps(new_data, indent=2)
