@@ -78,7 +78,7 @@ jobs:
         </html>
         EOF
         
-    - name: Add metadata to JSON
+    - name: Add metadata to JSON and update data_file to full URL
       run: |
         cat > ./add_metadata_script.py << 'EOL'
         import json
@@ -103,21 +103,29 @@ jobs:
             'api_endpoint': 'https://celestiaorg.github.io/tokenmetry/index.json', # This file itself
             'purpose': 'This JSON meta-index helps AI agents discover available repository token analyses, understand overall codebase statistics, and selectively access detailed data for specific repositories located in the repository_data/ directory.',
             'usage_instructions': {
-                'overview': 'Use `summary` fields for overall codebase size. Iterate through the `repositories` array for per-repository summaries and links to detailed data files.',
-                'repository_discovery': 'The `repositories` array lists all processed repositories. Each entry includes `name`, `url`, `total_tokens`, `total_files`, a `by_extension` summary for that repo, and a `data_file` field (e.g., `repository_data/repo_name.json`) which is the relative path to the detailed JSON for that repository.',
-                'accessing_detailed_data': 'To get detailed file breakdowns for a repository, construct the full URL: `https://celestiaorg.github.io/tokenmetry/` + `data_file` value from the repository entry in this meta-index. The detailed file will contain a `files` array with individual file paths and token counts.',
-                'context_management': 'Use `total_tokens` from this `index.json` (meta-index) for a quick overview. For detailed planning, fetch the individual repository JSON. The `json_file_token_count` in *those* files (if we add it there later) would indicate their size.',
-                'language_breakdown': '`summary.by_extension_across_all_repos` provides an overall language mix. Per-repository breakdowns are in `repositories[N].by_extension` within this file.',
+                'overview': 'This meta-index (`index.json`) provides a high-level summary of token counts across multiple repositories. Use `summary` fields for overall codebase statistics. The `repositories` array offers per-repository summaries and a direct URL in `data_file` to access detailed token counts for each file within that repository.',
+                'repository_discovery': 'The `repositories` array lists all processed repositories. Each entry includes `name`, `url`, `total_tokens`, `total_files`, a `by_extension` summary for that repo, and a `data_file` field which directly provides the full URL to the detailed JSON for that repository (e.g., `https://celestiaorg.github.io/tokenmetry/repository_data/repo_name.json`).',
+                'accessing_detailed_data': "To get detailed file breakdowns for a repository, directly use the full URL provided in the `data_file` field of the repository entry in this meta-index. The detailed file (a separate JSON) will contain a `files` array with individual file paths (relative to that repository root) and their token counts.",
+                'context_management': 'Use `total_tokens` from this `index.json` (meta-index) for a quick overview of repository sizes. For detailed planning or when specific file token counts are needed, fetch the individual repository JSON using its `data_file` URL. Be mindful of the size of these detailed JSONs.',
+                'language_breakdown': '`summary.by_extension_across_all_repos` in this meta-index provides an overall language mix. Per-repository language breakdowns are in `repositories[N].by_extension`.',
                 'context_window_warning': {
-                    'message': 'This `index.json` (meta-index) file is designed to be relatively small. Individual repository JSON files (linked via `data_file` in the `repositories` array, located in the `repository_data/` directory) can be large.',
-                    'recommendation': 'Always fetch and parse this `index.json` (meta-index) first. Then, selectively fetch individual repository JSONs as needed.',
+                    'message': 'This `index.json` (meta-index) file itself is designed to be relatively small. However, individual repository JSON files (linked via `data_file` in the `repositories` array) can be large.',
+                    'recommendation': 'Always fetch and parse this `index.json` (meta-index) first. Then, selectively fetch individual repository JSONs only for the repositories relevant to your current task and context window capacity.',
                     'retrieval_strategy': [
                         '1. Fetch and parse this `index.json` (meta-index) file.',
-                        '2. Analyze the `summary` and the `repositories` array to identify repositories of interest.',
-                        '3. For each repository of interest, use its `data_file` path (e.g., `repository_data/your_repo_name.json`) to construct the full URL and fetch its detailed JSON data (e.g., `https://celestiaorg.github.io/tokenmetry/repository_data/your_repo_name.json`).',
-                        '4. Process the detailed JSON. Be mindful of its size.'
+                        '2. Analyze the `summary` and the `repositories` array to identify repositories of interest based on name, total_tokens, or language breakdown.',
+                        '3. For each repository of interest, use the full URL from its `data_file` field to fetch its detailed JSON data.',
+                        '4. Process the detailed JSON. Be mindful of its size and token count if you plan to include its content in your context.'
                     ]
-                }
+                },
+                'example_agent_workflow': [
+                    "1. **Fetch Meta-Index:** Retrieve this `index.json` file using the URL from `metadata.api_endpoint`.",
+                    "2. **Understand Scope:** Parse `index.json`. Examine `metadata.description`, `metadata.data_structure`, and the main `summary` object for an overview of available data, total token counts, and repository count.",
+                    "3. **Identify Target Repositories:** Iterate through the `repositories` array. For each repository object, check its `name`, `total_tokens`, and `by_extension` summary to determine its relevance for your current task.",
+                    "4. **Selective Deep Dive (If Needed):** If a repository is relevant and you require file-level token counts or specific file paths, retrieve its detailed JSON data. The full URL for this detailed JSON is provided directly in the repository object's `data_file` field.",
+                    "5. **Process Detailed Data:** Parse the individual repository's JSON. This file will contain a `files` array, where each element details a source file's path (relative to its repository root) and its token count. Be mindful of the size of this detailed JSON (refer to `context_window_warning`).",
+                    "6. **Iterate as Needed:** Repeat steps 3-5 for other relevant repositories based on your task requirements and available context window capacity."
+                ]
             },
             'data_structure': {
                 'summary': 'High-level aggregated statistics across all repositories (total_repositories_configured, successful_repositories_processed, total_files_across_all_repos, total_tokens_across_all_repos, by_extension_across_all_repos).',
@@ -131,12 +139,17 @@ jobs:
             if key not in new_data: # Avoid overwriting if script already produced 'metadata'
                  new_data[key] = value
         
-        # Add full URLs to individual repository data files
+        # Update data_file to be the full URL
         base_url = "https://celestiaorg.github.io/tokenmetry/"
         if 'repositories' in new_data and isinstance(new_data['repositories'], list):
             for repo_entry in new_data['repositories']:
-                if 'data_file' in repo_entry and isinstance(repo_entry['data_file'], str):
-                    repo_entry['data_file_full_url'] = base_url + repo_entry['data_file']
+                if 'data_file' in repo_entry and isinstance(repo_entry['data_file'], str) and repo_entry['data_file'].startswith('repository_data/'):
+                    # Overwrite data_file with the full URL
+                    repo_entry['data_file'] = base_url + repo_entry['data_file']
+                # Ensure data_file_full_url is not present if it somehow existed
+                if 'data_file_full_url' in repo_entry:
+                    del repo_entry['data_file_full_url']
+
 
         # Calculate approximate token count of this index.json (meta-index) file itself
         json_content_for_meta_index = json.dumps(new_data, indent=2)
