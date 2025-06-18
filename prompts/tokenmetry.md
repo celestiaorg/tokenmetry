@@ -80,7 +80,6 @@ Here are some examples of how you can use this data:
     3.  *Action:* Filter `files` array for `extension == ".rs"` and list `path` and `tokens`.
 
 ## 5. Important Considerations
-## 5. Important Considerations
 
 *   **Start with `index.json`:** This file is small and gives you the necessary overview and pointers, including direct full URLs to detailed data.
 *   **Selective Fetching:** Only fetch detailed repository JSON files when you need that level of detail for a specific repository. This saves processing time and context window space.
