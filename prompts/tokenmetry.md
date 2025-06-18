@@ -17,8 +17,7 @@ This `index.json` file is relatively small and contains:
         -   `total_files`: Total number of tokenized files in this repository.
         -   `total_tokens`: Total tokens in this repository.
         -   `by_extension`: A summary of file counts and token counts per language (e.g., `.go`, `.md`, `.rs`, `.sol`) for this repository.
-        -   `data_file`: A relative path to a JSON file containing detailed tokenization data for *only this repository* (e.g., `repository_data/celestia-app.json`).
-        -   `data_file_full_url`: The full, direct URL to the detailed JSON data file for this repository (e.g., `https://celestiaorg.github.io/tokenmetry/repository_data/celestia-app.json`). **This is the recommended field to use for direct access.**
+        -   `data_file`: The full, direct URL to the JSON file containing detailed tokenization data for *only this repository* (e.g., `https://celestiaorg.github.io/tokenmetry/repository_data/celestia-app.json`). **This is the recommended field to use for direct access.**
         -   `error`: Null or an error message if processing failed for this repository.
 
 **Always fetch and parse this `index.json` (meta-index) first.**
@@ -28,8 +27,7 @@ This `index.json` file is relatively small and contains:
 To get the detailed file-by-file breakdown for a specific repository:
 
 1.  In the `index.json` (meta-index), find the desired repository within the `repositories` array.
-2.  Use the value of its `data_file_full_url` field. This provides the direct URL to the detailed data.
-    (Alternatively, you can construct the URL using the `data_file` relative path: `https://celestiaorg.github.io/tokenmetry/` + `data_file_path`)
+2.  Use the value of its `data_file` field. This provides the direct URL to the detailed data.
 3.  Fetch and parse this individual repository JSON file using the full URL.
 
 ## 3. Structure of Individual Repository JSON Files
@@ -62,20 +60,20 @@ Here are some examples of how you can use this data:
 *   "What is the overall breakdown of tokens by language (Go, Markdown, Rust, Solidity) across all projects?"
     *   *Action:* Inspect `summary.by_extension_across_all_repos` from `index.json`.
 *   "Get the direct URL for the detailed token data of the 'celestia-node' repository."
-    *   *Action:* In `index.json`, find the entry for 'celestia-node' in the `repositories` array. Retrieve the value of `data_file_full_url`.
+    *   *Action:* In `index.json`, find the entry for 'celestia-node' in the `repositories` array. Retrieve the value of `data_file`.
 
 **Using Individual Repository JSON Files (after finding them via `index.json` and using `data_file_full_url`):**
 
 *   "What are the 5 largest Go files by token count in the 'celestia-app' repository?"
-    1.  *Action:* In `index.json`, find the entry for 'celestia-app' and get its `data_file_full_url`.
+    1.  *Action:* In `index.json`, find the entry for 'celestia-app' and get its `data_file`.
     2.  *Action:* Fetch the detailed JSON for 'celestia-app' using this URL.
     3.  *Action:* In the detailed JSON, filter the `files` array for `extension == ".go"`, sort by `tokens` descending, and take the top 5.
 *   "How many Markdown files are in the 'docs' repository?"
-    1.  *Action:* In `index.json`, find 'docs', get its `data_file_full_url`.
+    1.  *Action:* In `index.json`, find 'docs', get its `data_file`.
     2.  *Action:* Fetch its detailed JSON.
     3.  *Action:* Look at `by_extension['.md']['files']` in the detailed JSON (or this info is also available directly in the `repositories` array of `index.json`).
 *   "Provide a list of all Rust files and their token counts in the 'nitro' repository."
-    1.  *Action:* Find 'nitro' in `index.json`, get `data_file_full_url`.
+    1.  *Action:* Find 'nitro' in `index.json`, get `data_file`.
     2.  *Action:* Fetch detailed JSON for 'nitro'.
     3.  *Action:* Filter `files` array for `extension == ".rs"` and list `path` and `tokens`.
 
