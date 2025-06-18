@@ -17,15 +17,27 @@ The JSON includes comprehensive metadata, usage instructions, and detailed token
 The system analyzes repositories configured in `repos.txt`. Current analysis results:
 git 
 <!-- TOKENMETRY_TABLE_START -->
-| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens |
-|------------|-------------|--------------|----------|-----------|----------------|-----------------|
-| celestia-core | 1179 | 3,202,991 | 709 | 2,496,398 | 470 | 706,593 |
-| celestia-app | 436 | 937,662 | 356 | 671,589 | 80 | 266,073 |
-| celestia-node | 494 | 736,663 | 475 | 697,375 | 19 | 39,288 |
-| rsmt2d | 14 | 40,074 | 13 | 38,942 | 1 | 1,132 |
-| **TOTAL** | **2123** | **4,917,390** | **1553** | **3,904,304** | **570** | **1,013,086** |
+| Repository | Total Files | Total Tokens | Go Files | Go Tokens | Markdown Files | Markdown Tokens | Rust Files | Rust Tokens | Solidity Files | Solidity Tokens |
+|------------|-------------|--------------|----------|-----------|----------------|-----------------|------------|-------------|----------------|-----------------|
+| celestia-core | 1179 | 3,205,749 | 709 | 2,499,156 | 470 | 706,593 | 0 | 0 | 0 | 0 |
+| celestia-app | 436 | 937,661 | 356 | 671,588 | 80 | 266,073 | 0 | 0 | 0 | 0 |
+| celestia-node | 494 | 736,663 | 475 | 697,375 | 19 | 39,288 | 0 | 0 | 0 | 0 |
+| rsmt2d | 14 | 40,074 | 13 | 38,942 | 1 | 1,132 | 0 | 0 | 0 | 0 |
+| optimism | 2824 | 7,774,437 | 2268 | 5,975,555 | 97 | 124,239 | 0 | 0 | 459 | 1,674,643 |
+| nitro | 742 | 2,110,710 | 581 | 1,598,154 | 13 | 7,132 | 148 | 505,424 | 0 | 0 |
+| nitro-contracts | 169 | 397,834 | 0 | 0 | 2 | 2,125 | 0 | 0 | 167 | 395,709 |
+| nitro-das-celestia | 39 | 78,091 | 17 | 49,795 | 2 | 3,864 | 0 | 0 | 20 | 24,432 |
+| docs | 85 | 215,866 | 1 | 2,297 | 84 | 213,569 | 0 | 0 | 0 | 0 |
+| eq-service | 21 | 39,586 | 0 | 0 | 5 | 4,044 | 16 | 35,542 | 0 | 0 |
+| CIPs | 49 | 118,807 | 0 | 0 | 49 | 118,807 | 0 | 0 | 0 | 0 |
+| pda-proxy | 18 | 42,871 | 0 | 0 | 3 | 5,717 | 15 | 37,154 | 0 | 0 |
+| hana | 29 | 24,723 | 0 | 0 | 7 | 315 | 22 | 24,408 | 0 | 0 |
+| localestia | 12 | 26,735 | 0 | 0 | 2 | 1,605 | 10 | 25,130 | 0 | 0 |
+| rollkit | 251 | 506,909 | 195 | 419,195 | 56 | 87,714 | 0 | 0 | 0 | 0 |
+| zksync-era | 2325 | 6,746,389 | 0 | 0 | 274 | 680,401 | 1974 | 5,969,812 | 77 | 96,176 |
+| **TOTAL** | **8687** | **23,003,105** | **4615** | **11,952,057** | **1164** | **2,262,618** | **2185** | **6,597,470** | **723** | **2,190,960** |
 
-**Last Updated:** 2025-06-18 06:01:22 UTC
+**Last Updated:** 2025-06-18 13:28:20 UTC
 <!-- TOKENMETRY_TABLE_END -->
 
 **File Types:** `.go` (Go source code) and `.md` (Markdown documentation)
