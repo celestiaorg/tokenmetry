@@ -30,6 +30,14 @@ except ImportError:
     print("Warning: transformers library not found.")
 
 try:
+    from tokenizers import Tokenizer
+    from tokenizers.models import BPE
+    from tokenizers.pre_tokenizers import Whitespace
+    HAS_TOKENIZERS = True
+except ImportError:
+    HAS_TOKENIZERS = False
+
+try:
     import git
     HAS_GIT = True
 except ImportError:
@@ -67,11 +75,13 @@ def load_gpt2_tokenizer():
     """Load GPT-2 tokenizer if transformers is available."""
     if HAS_TRANSFORMERS:
         return GPT2TokenizerFast.from_pretrained('gpt2')
-    else:
+    elif HAS_TOKENIZERS:
         # Fallback: create a simple BPE tokenizer
         tokenizer = Tokenizer(BPE(unk_token="<unk>"))
         tokenizer.pre_tokenizer = Whitespace()
         return tokenizer
+    else:
+        raise ImportError("Neither transformers nor tokenizers library is available. Please install one of them.")
 
 
 def count_tokens_in_text(text: str, tokenizer) -> int:
