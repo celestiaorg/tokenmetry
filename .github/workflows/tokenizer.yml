@@ -53,6 +53,8 @@ jobs:
       run: poetry install --no-interaction --no-root
       
     - name: Run token analysis
+      env:
+        TOKENIZERS_PARALLELISM: false
       run: |
         mkdir -p _site
         poetry run python tokenizer.py --celestia-repos --output _site/index.json
