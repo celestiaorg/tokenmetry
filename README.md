@@ -262,25 +262,6 @@ if extension not in ['.go', '.md', '.rs', '.py']:  # Add new extensions
     return 0, extension
 ```
 
-### Improving Analysis
-
-Consider enhancements like:
-- Language-specific token analysis
-- Code vs comment separation
-- Historical trend tracking
-- Performance optimizations
-
-## 📄 License
-
-This project is part of the CelestiaOrg ecosystem. See individual repository licenses for details.
-
-## 🆘 Support
-
-For issues or questions:
-1. Check the **Actions** tab for workflow failures
-2. Review the **Issues** tab for known problems
-3. Create a new issue with detailed information
-
 ---
 
 **Last Updated:** Auto-generated daily at 6 AM UTC  
