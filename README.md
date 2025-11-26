@@ -39,7 +39,7 @@ git
 | weave | 127 | 352,078 | 123 | 350,618 | 4 | 1,460 | 0 | 0 | 0 | 0 |
 | **TOTAL** | **9849** | **27,135,082** | **5300** | **14,412,862** | **1282** | **2,519,597** | **2464** | **7,795,797** | **803** | **2,406,826** |
 
-**Last Updated:** 2025-11-25 06:02:17 UTC
+**Last Updated:** 2025-11-26 06:02:09 UTC
 <!-- TOKENMETRY_TABLE_END -->
 
 **File Types:** `.go` (Go source code) and `.md` (Markdown documentation)
